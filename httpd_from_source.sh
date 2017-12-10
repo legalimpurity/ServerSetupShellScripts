@@ -3,24 +3,40 @@ sh basic_server.sh
 sudo yum -y install make gcc
 sudo yum -y install pcre-devel
 sudo yum -y install perl # need to install this now with http installation otherwise php can never be compiled
-wget http://www.apache.org/dist/httpd/httpd-2.4.25.tar.gz
-wget http://www.us.apache.org/dist/apr/apr-1.5.2.tar.gz
-wget http://www.eu.apache.org/dist/apr/apr-util-1.5.4.tar.gz
+sudo yum install expat-devel # for apr-util
 
-tar -zxvf httpd-2.4.25.tar.gz
-tar -zxvf apr-1.5.2.tar.gz
-tar -zxvf apr-util-1.5.4.tar.gz
+httpdV="httpd-2.4.29"
+aprV="apr-1.6.3"
+aprUtilV="apr-util-1.6.1"
+genericFooter=".tar.gz"
+installationFolder="/legalroot/webserver"
+
+#save yourself from apr-util errormsg
+export LC_ALL=en_US.UTF-8
+export LANG=en_US.UTF-8
+
+
+if [ ! -d "$installationFolder" ]; then
+  sudo mkdir -p $installationFolder
+fi
+wget "http://www.apache.org/dist/httpd/$httpdV$genericFooter"
+wget "http://www.us.apache.org/dist/apr/$aprV$genericFooter"
+wget "http://www.eu.apache.org/dist/apr/$aprUtilV$genericFooter"
+
+tar -zxvf $httpdV$genericFooter
+tar -zxvf $aprV$genericFooter
+tar -zxvf $aprUtilV$genericFooter
 
 
 #1. APR
-        cd apr-1.5.2
-        ./configure
+        cd "$aprV"
+        ./configure  --prefix=/usr/local/apr
         make
         sudo make install
         cd ..
 
 #2. APR UTIL
-        cd apr-util-1.5.4
+        cd "$aprUtilV"
         ./configure --with-apr=/usr/local/apr
         make
         sudo make install
@@ -28,21 +44,21 @@ tar -zxvf apr-util-1.5.4.tar.gz
 
 
 
-cd httpd-2.4.25
-./configure --prefix=/legalroot/webserver --enable-so
+cd "$httpdV"
+./configure --prefix="$installationFolder" --enable-so
 make
 sudo make install
 
-sudo /legalroot/webserver/bin/apachectl start        # will start apache
-sudo /legalroot/webserver/bin/apachectl stop # stop for php installation
+sudo "$installationFolder/bin/apachectl" start        # will start apache
+sudo "$installationFolder/bin/apachectl" stop # stop for php installation
 
 cd ..
-rm -fR httpd-2.4.25
-rm -fR httpd-2.4.25.tar.gz
-rm -fR apr-1.5.2.tar.gz
-rm -fR apr-util-1.5.4.tar.gz
-rm -fR apr-1.5.2
-rm -fR apr-util-1.5.4
+rm -fR $httpdV
+rm -fR $httpdV$genericFooter
+rm -fR $aprV
+rm -fR $aprV$genericFooter
+rm -fR $aprUtilV
+rm -fR $aprUtilV$genericFooter
 
 sudo yum -y install firewalld
 sudo systemctl start firewalld
@@ -50,6 +66,6 @@ sudo systemctl enable firewalld
 sudo firewall-cmd --permanent --add-port=80/tcp
 sudo systemctl restart firewalld
 
-echo "sudo vi /legalroot/webserver/conf/httpd.conf"
+echo "sudo vi $installationFolder/conf/httpd.conf"
 echo "Options Indexes FollowSymLinks change to ------> Options FollowSymLinks"
 echo "AddType  application/x-httpd-php         .php"
